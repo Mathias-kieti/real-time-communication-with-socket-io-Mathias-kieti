@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import LoginPage from '../pages/LoginPage';
 import ChatPage from '../pages/ChatPage';
-import '.index.css';
+import './index.css';
 
 function App() {
   const [username, setUsername] = useState('');
