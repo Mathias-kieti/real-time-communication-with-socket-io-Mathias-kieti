@@ -1,36 +1,35 @@
-// server.js (updated for Netlify + Render)
+// server/server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const routes = require('./controllers/authControllers');
+const routes = require('./routes'); // <- fixed path
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+  maxHttpBufferSize: 1e7, // ~10MB
+});
 
-// Use CLIENT_URL env variable if available, fallback to localhost
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-
-// Middleware for CORS
-app.use(cors({
-  origin: CLIENT_URL,
-  methods: ['GET', 'POST'],
-  credentials: true,
-}));
-
+app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory stores
-const users = {};             // socketId -> { username, id, currentRoom }
-const messages = {            // room -> [message]
-  global: [],
-};
-const typingUsers = {};       // room -> { socketId: username }
+const users = {}; // socketId -> { username, id, currentRoom }
+const messages = { global: [] }; // room -> [message]
+const typingUsers = {}; // room -> { socketId: username }
 
+// Helper to store messages
 function storeMessage(room, message) {
   if (!messages[room]) messages[room] = [];
   messages[room].push(message);
@@ -38,30 +37,18 @@ function storeMessage(room, message) {
   if (messages[room].length > MAX) messages[room].shift();
 }
 
-// HTTP server
-const server = http.createServer(app);
-
-// Socket.IO server
-const io = new Server(server, {
-  cors: {
-    origin: CLIENT_URL, // allow frontend
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-  maxHttpBufferSize: 1e7,
-});
-
+// Socket.io events
 io.on('connection', (socket) => {
-  console.log(`Connected: ${socket.id}`);
+  console.log(`Connected ${socket.id}`);
 
   socket.join('global');
   users[socket.id] = { id: socket.id, username: 'Anonymous', currentRoom: 'global' };
-  io.to('global').emit('user_list', Object.values(users).map(u => ({ username: u.username, id: u.id })));
+  io.to('global').emit('user_list', Object.values(users));
 
   socket.on('user_join', (username, cb) => {
     users[socket.id].username = username || 'Anonymous';
     io.emit('user_joined', { username, id: socket.id });
-    io.emit('user_list', Object.values(users).map(u => ({ username: u.username, id: u.id })));
+    io.emit('user_list', Object.values(users));
     if (cb) cb({ ok: true });
   });
 
@@ -77,7 +64,7 @@ io.on('connection', (socket) => {
   socket.on('send_message', (messageData, ack) => {
     const room = messageData.room || users[socket.id].currentRoom || 'global';
     const message = {
-      id: Date.now().toString() + '-' + Math.random().toString(36).slice(2,8),
+      id: Date.now().toString() + '-' + Math.random().toString(36).slice(2, 8),
       sender: users[socket.id]?.username || 'Anonymous',
       senderId: socket.id,
       message: messageData.message,
@@ -120,7 +107,9 @@ io.on('connection', (socket) => {
       else msg.reactions[reaction].splice(idx, 1);
       io.to(room).emit('message_reaction', { messageId, reaction, reactors: msg.reactions[reaction] });
       if (ack) ack({ ok: true });
-    } else if (ack) ack({ ok: false, error: 'not_found' });
+    } else {
+      if (ack) ack({ ok: false, error: 'not_found' });
+    }
   });
 
   socket.on('typing', ({ isTyping, room }) => {
@@ -148,7 +137,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('Disconnected:', socket.id);
+    console.log('Disconnect', socket.id);
     const user = users[socket.id];
     if (user) {
       io.emit('user_left', { username: user.username, id: socket.id });
@@ -162,7 +151,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// API routes
+// Routes API
 app.use('/api', routes);
 
 app.get('/api/messages', (req, res) => {
@@ -172,7 +161,8 @@ app.get('/api/messages', (req, res) => {
   const roomMsgs = messages[room] || [];
   const start = Math.max(0, roomMsgs.length - page * limit);
   const end = roomMsgs.length - (page - 1) * limit;
-  res.json({ room, page, limit, items: roomMsgs.slice(start, end) });
+  const pageMsgs = roomMsgs.slice(start, end);
+  res.json({ room, page, limit, items: pageMsgs });
 });
 
 app.get('/api/users', (req, res) => res.json(Object.values(users)));
