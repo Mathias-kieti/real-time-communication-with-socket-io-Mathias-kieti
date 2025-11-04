@@ -1,3 +1,4 @@
+// client/src/pages/ChatPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useSocket } from '../src/socket';
 import MessageList from '../components/MessageList';
@@ -5,7 +6,7 @@ import MessageInput from '../components/MessageInput';
 import TypingIndicator from '../components/TypingIndicator';
 import UserList from '../components/UserList';
 
-export default function ChatPage({ username, onLogout }) {
+export default function ChatPage({ username, onLogout, backendUrl }) {
   const {
     socket,
     isConnected,
@@ -19,19 +20,22 @@ export default function ChatPage({ username, onLogout }) {
     sendPrivateMessage,
     joinRoom,
     markMessageRead,
-  } = useSocket();
+  } = useSocket(backendUrl);
 
   const [room, setRoom] = useState('global');
 
   useEffect(() => {
-    // connect on mount with username
+    // Connect on mount with username
     connect(username);
-    socket.emit('join_room', room, () => {});
+
+    // Join default room
+    socket?.emit('join_room', room);
+
     return () => disconnect();
   }, []); // eslint-disable-line
 
   useEffect(() => {
-    // whenever room changes, join it
+    // Join new room whenever it changes
     joinRoom(room);
   }, [room]); // eslint-disable-line
 
@@ -53,10 +57,13 @@ export default function ChatPage({ username, onLogout }) {
           </div>
         </div>
 
-        <UserList users={users} onPrivate={(id) => {
-          const msg = prompt('Type private message:');
-          if (msg) sendPrivateMessage(id, msg, (ack) => console.log('private ack', ack));
-        }} />
+        <UserList
+          users={users}
+          onPrivate={(id) => {
+            const msg = prompt('Type private message:');
+            if (msg) sendPrivateMessage(id, msg, (ack) => console.log('private ack', ack));
+          }}
+        />
 
         <div className="sidebar-bottom">
           <button onClick={() => setRoom('global')}>Global</button>
@@ -82,7 +89,11 @@ export default function ChatPage({ username, onLogout }) {
           room={room}
           onSend={(msg) => sendMessage(msg, room, (ack) => console.log('sent ack', ack))}
           onTyping={(isTyping) => setTyping(isTyping, room)}
-          onSendFile={(dataUrl, filename) => socket.emit('file_message', { dataUrl, filename, room }, (ack) => console.log('file ack', ack))}
+          onSendFile={(dataUrl, filename) =>
+            socket?.emit('file_message', { dataUrl, filename, room }, (ack) =>
+              console.log('file ack', ack)
+            )
+          }
         />
       </main>
     </div>
