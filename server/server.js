@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const routes = require('./controllers/routes');
+const routes = require('./controllers/authControllers');
 
 dotenv.config();
 
