@@ -2,7 +2,8 @@
 import { io } from 'socket.io-client';
 import { useEffect, useState } from 'react';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// Prefer build-time VITE_SOCKET_URL; fall back to the Render URL in case it's not set
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://real-time-communication-with-socket-io-p7fh.onrender.com';
 
 export const socket = io(SOCKET_URL, {
   autoConnect: false,

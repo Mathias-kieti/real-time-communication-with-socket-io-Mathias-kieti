@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const BASE = import.meta.env.VITE_SOCKET_URL || 'https://real-time-communication-with-socket-io-p7fh.onrender.com';
 
 export async function apiLogin(username) {
   const res = await fetch(`${BASE}/api/auth/login`, {
