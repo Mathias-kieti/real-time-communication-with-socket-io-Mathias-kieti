@@ -17,7 +17,7 @@ const server = http.createServer(app);
 // Allowed frontend origins
 const ALLOWED_ORIGINS = [
   'http://localhost:5173', // local dev
-  'https://realtimecommunicationserver.netlify.app' // deployed frontend
+  'https://communicationserver.vercel.app/' // deployed frontend
 ];
 
 // Middleware for Express
