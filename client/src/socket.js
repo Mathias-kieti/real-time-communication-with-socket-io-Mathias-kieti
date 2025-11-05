@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 // Use environment variable first, fallback to your Render URL
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
-  'https://real-time-communication-with-socket-io-p7fh.onrender.com';
+  'https://communicationserver-h3yw.onrender.com';
 
 // Initialize socket but don't auto-connect
 export const socket = io(SOCKET_URL, {
